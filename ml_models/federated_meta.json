@@ -1,0 +1,33 @@
+{
+  "model": "Fedprox Ridge (Federated)",
+  "strategy": "fedprox",
+  "task": "regression",
+  "features": [
+    "feat_0",
+    "feat_1",
+    "feat_2",
+    "feat_3",
+    "feat_4",
+    "feat_5",
+    "feat_6",
+    "feat_7",
+    "feat_8",
+    "feat_9",
+    "feat_10",
+    "feat_11",
+    "feat_12",
+    "feat_13",
+    "feat_14",
+    "feat_15",
+    "feat_16",
+    "feat_17",
+    "feat_18",
+    "feat_19",
+    "feat_20"
+  ],
+  "training_samples": 2327,
+  "n_clients": 5,
+  "rounds": 25,
+  "final_rmse": 0.9243,
+  "final_r2": 0.2993
+}

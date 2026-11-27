@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AquaSmart — Intelligent Fish Feeding System</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="/static/js/chart.umd.min.js"></script>
+  <style>
+    /* Police Inter chargee localement si dispo, sinon polices systeme (fonctionne hors-ligne) */
+    /* @import desactive pour eviter le timeout reseau hors-ligne */
+  </style>
+</head>
+<body>
+
+<!-- ─── Sidebar ─────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">🐟</span>
+    <div class="logo-text">
+      <h1>AquaSmart</h1>
+      <p>Fish Feeding Intelligence</p>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <p class="nav-section-label">Overview</p>
+    <button class="nav-item active" data-page="dashboard">
+      <span class="icon">📊</span> Dashboard
+    </button>
+    <button class="nav-item" data-page="ponds">
+      <span class="icon">🏊</span> Ponds Monitor
+    </button>
+
+    <p class="nav-section-label">Intelligence</p>
+    <button class="nav-item" data-page="predict">
+      <span class="icon">🤖</span> Predict & Recommend
+    </button>
+    <button class="nav-item" data-page="analytics">
+      <span class="icon">📈</span> Analytics
+    </button>
+
+    <p class="nav-section-label">🌾 For Farmers</p>
+    <button class="nav-item" data-page="fisher">
+      <span class="icon">🐠</span> Fisher Interface
+    </button>
+
+    <p class="nav-section-label">Assistant</p>
+    <button class="nav-item" data-page="chat">
+      <span class="icon">💬</span> AquaBot Chat
+    </button>
+
+    <p class="nav-section-label">Federated AI</p>
+    <button class="nav-item" data-page="federated">
+      <span class="icon">🌐</span> Federated Learning
+    </button>
+
+    <p class="nav-section-label">System</p>
+    <button class="nav-item" data-page="about">
+      <span class="icon">ℹ️</span> About
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div style="margin-bottom:4px">v1.0.0 — PDL Project</div>
+    <div style="opacity:.6">SESAME Engineering School</div>
+  </div>
+</aside>
+
+<!-- ─── Main ─────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button class="hamburger" id="hamburger">☰</button>
+      <div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-sub" id="topbar-sub">Real-time water quality monitoring</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span style="font-size:.8rem;color:var(--text-muted)">Live feed</span>
+      <span class="status-dot"></span>
+      <span id="live-time" style="font-size:.8rem;color:var(--text-muted)"></span>
+    </div>
+  </header>
+
+  <!-- ─── DASHBOARD PAGE ─── -->
+  <div class="page active" id="page-dashboard">
+
+    <div class="section-header">
+      <div>
+        <div class="section-title">🌊 Water Quality Overview</div>
+        <div class="section-sub">Last updated: <span id="last-update">—</span></div>
+      </div>
+      <button class="btn btn-outline" onclick="refreshDashboard()">↻ Refresh</button>
+    </div>
+
+    <!-- Metric cards -->
+    <div class="grid-4" id="metric-cards" style="margin-bottom:20px">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- WQI + Alerts -->
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">💧 Water Quality Index</span>
+          <span id="wqi-badge" class="badge badge-green">—</span>
+        </div>
+        <div class="gauge-wrap">
+          <canvas id="wqiGauge" width="240" height="140"></canvas>
+          <div style="font-size:2.6rem;font-weight:800;color:var(--teal);margin-top:-10px" id="wqi-value">—</div>
+          <div style="color:var(--text-muted);font-size:.8rem" id="wqi-cat">Loading…</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">⚠️ Active Alerts</span>
+          <span id="alert-count-badge" class="badge badge-green">0 alerts</span>
+        </div>
+        <div id="alerts-list" style="max-height:220px;overflow-y:auto">
+          <div class="text-muted small" style="padding:16px 0">No active alerts — conditions are good.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feeding recommendation banner -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title">🎣 Current Feeding Strategy</span>
+      </div>
+      <div id="feeding-banner">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- Trend chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📉 24h Parameter Trends</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" style="padding:5px 12px;font-size:.75rem" onclick="setTrendParam('temperature')">Temp</button>
+          <button class="btn btn-outline" style="padding:5px 12px;font-size:.75rem" onclick="setTrendParam('dissolved_oxygen')">DO</button>
+          <button class="btn btn-outline" style="padding:5px 12px;font-size:.75rem" onclick="setTrendParam('ph')">pH</button>
+          <button class="btn btn-outline" style="padding:5px 12px;font-size:.75rem" onclick="setTrendParam('wqi')">WQI</button>
+        </div>
+      </div>
+      <canvas id="trendChart" height="90"></canvas>
+    </div>
+  </div>
+
+  <!-- ─── PONDS PAGE ─── -->
+  <div class="page" id="page-ponds">
+    <div class="section-header">
+      <div>
+        <div class="section-title">🏊 Ponds Monitor</div>
+        <div class="section-sub">Real-time status of all fish ponds</div>
+      </div>
+      <button class="btn btn-outline" onclick="loadPonds()">↻ Refresh</button>
+    </div>
+    <div class="grid-auto" id="ponds-grid">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- ─── PREDICT PAGE ─── -->
+  <div class="page" id="page-predict">
+    <div class="section-header">
+      <div>
+        <div class="section-title">🤖 Predict & Recommend</div>
+        <div class="section-sub">Enter water parameters to get an ML-powered feeding recommendation</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="align-items:start">
+      <!-- Input form -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📋 Water Parameters</span>
+          <button class="btn btn-outline" style="padding:5px 12px;font-size:.75rem" onclick="fillDemo()">Demo values</button>
+        </div>
+
+        <form id="predict-form">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">🌡️ Temperature (°C)</label>
+              <input class="form-input" type="number" id="f-temp" value="24" step="0.1" min="0" max="45" required />
+              <div class="form-hint">Optimal: 22–26°C</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">💨 Dissolved O₂ (mg/L)</label>
+              <input class="form-input" type="number" id="f-do" value="7.0" step="0.1" min="0" max="15" required />
+              <div class="form-hint">Minimum: 5 mg/L</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">⚗️ pH</label>
+              <input class="form-input" type="number" id="f-ph" value="7.2" step="0.1" min="0" max="14" required />
+              <div class="form-hint">Range: 6.5–8.5</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🌫️ Turbidity (NTU)</label>
+              <input class="form-input" type="number" id="f-turb" value="12" step="0.5" min="0" max="200" required />
+              <div class="form-hint">Max: 30 NTU</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">☠️ Ammonia (mg/L)</label>
+              <input class="form-input" type="number" id="f-ammo" value="0.008" step="0.001" min="0" max="5" required />
+              <div class="form-hint">Safe: &lt; 0.02 mg/L</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🧪 Nitrate (mg/L)</label>
+              <input class="form-input" type="number" id="f-nit" value="3.0" step="0.1" min="0" max="100" />
+              <div class="form-hint">Max: 10 mg/L</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🐠 Avg Fish Weight (g)</label>
+              <input class="form-input" type="number" id="f-fw" value="80" step="1" min="1" max="5000" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">🏊 Fish Population</label>
+              <input class="form-input" type="number" id="f-pop" value="300" step="1" min="1" max="100000" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🍽️ Base Daily Feed (kg)</label>
+            <input class="form-input" type="number" id="f-feed" value="5" step="0.1" min="0.1" max="1000" required />
+            <div class="form-hint">Starting feed amount before ML adjustment</div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px">
+            🔮 Get Recommendation
+          </button>
+        </form>
+      </div>
+
+      <!-- Result panel -->
+      <div>
+        <div id="predict-result">
+          <div class="card" style="text-align:center;padding:40px">
+            <div style="font-size:3rem;margin-bottom:12px">🤖</div>
+            <div style="color:var(--text-muted)">Enter water parameters and click<br><strong>Get Recommendation</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ANALYTICS PAGE ─── -->
+  <div class="page" id="page-analytics">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📈 Analytics</div>
+        <div class="section-sub">Historical trends and ML model insights</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">🌡️ Temperature vs DO (48h)</span></div>
+        <canvas id="tempDoChart" height="130"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚗️ pH Trend (48h)</span></div>
+        <canvas id="phChart" height="130"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">☠️ Ammonia & Nitrate (48h)</span></div>
+        <canvas id="ammoChart" height="130"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">💧 WQI Distribution (48h)</span></div>
+        <canvas id="wqiHistChart" height="130"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">🤖 ML Model Information</span></div>
+      <div id="model-info">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CHAT PAGE ─── -->
+  <div class="page" id="page-chat">
+    <div class="section-header">
+      <div>
+        <div class="section-title">💬 AquaBot — Fish Farming Assistant</div>
+        <div class="section-sub">Ask anything about water quality, feeding, or fish health</div>
+      </div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-avatar">🐟</div>
+        <div>
+          <div style="font-weight:700">AquaBot</div>
+          <div style="font-size:.75rem;color:var(--green)">● Online — Aquaculture Expert</div>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <!-- Welcome message -->
+        <div class="message bot">
+          <div class="msg-avatar bot">🐟</div>
+          <div>
+            <div class="msg-bubble">
+              Hello! I'm <strong>AquaBot</strong>, your intelligent fish farming assistant. I can help you with:<br><br>
+              • Water quality parameters (temperature, DO, pH, turbidity, ammonia)<br>
+              • Feeding rates, schedules, and strategies<br>
+              • Disease prevention and WQI interpretation<br>
+              • Feed Conversion Ratio (FCR) tips<br><br>
+              What would you like to know?
+            </div>
+            <div class="suggestions" id="initial-suggestions">
+              <span class="suggestion-chip" onclick="sendSuggestion(this)">What is optimal temperature?</span>
+              <span class="suggestion-chip" onclick="sendSuggestion(this)">How much should I feed?</span>
+              <span class="suggestion-chip" onclick="sendSuggestion(this)">What is WQI?</span>
+              <span class="suggestion-chip" onclick="sendSuggestion(this)">Signs of disease?</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <input class="chat-input" id="chat-input" type="text"
+               placeholder="Ask about water quality, feeding, fish health…"
+               onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="chat-send" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ABOUT PAGE ─── -->
+  <div class="page" id="page-about">
+    <div class="section-header">
+      <div class="section-title">ℹ️ About AquaSmart</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">🎓 Project Information</span></div>
+        <div style="line-height:1.8;color:var(--text-muted);font-size:.88rem">
+          <p><strong style="color:var(--text)">Module:</strong> PDL — I4_881 | ING4 Semestre 2</p>
+          <p><strong style="color:var(--text)">School:</strong> SESAME — École Supérieure Privée des Sciences Appliquées et de Management</p>
+          <p><strong style="color:var(--text)">Supervisor:</strong> Louay Tanazefti</p>
+          <p style="margin-top:12px"><strong style="color:var(--text)">Objective:</strong> Optimize fish feeding using environmental IoT sensor data and machine learning to reduce waste and improve fish health.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🤖 ML Pipeline</span></div>
+        <div style="font-size:.85rem;color:var(--text-muted);line-height:1.9">
+          <div>✅ Multi-source IoT pond data loading</div>
+          <div>✅ Data cleaning & outlier removal</div>
+          <div>✅ Feature engineering (WQI, stress indices)</div>
+          <div>✅ Mutual information feature selection</div>
+          <div>✅ RobustScaler preprocessing</div>
+          <div>✅ Gradient Boosting regression model</div>
+          <div>✅ Rule-based + ML hybrid advisor</div>
+          <div>✅ Domain-trained chatbot (no API key)</div>
+          <div>✅ FastAPI REST backend + live dashboard</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚗️ Feeding Strategies</span></div>
+        <div style="font-size:.85rem;line-height:2">
+          <div class="flex items-center gap-2"><span class="badge badge-red">STOP ×0.0</span> Critical conditions (temp &lt;12°C or &gt;35°C, DO &lt;3, ammonia &gt;0.06)</div>
+          <div class="flex items-center gap-2 mt-4"><span class="badge badge-orange">REDUCE ×0.55</span> Suboptimal — reduce feeding 45%</div>
+          <div class="flex items-center gap-2 mt-4"><span class="badge badge-green">NORMAL ×1.0</span> Acceptable conditions — normal feeding</div>
+          <div class="flex items-center gap-2 mt-4"><span class="badge badge-blue">INCREASE ×1.1</span> Excellent conditions — increase 10%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🛠️ Tech Stack</span></div>
+        <div style="font-size:.85rem;color:var(--text-muted);line-height:1.9">
+          <div>🐍 <strong style="color:var(--text)">Python 3.11+</strong> — Core language</div>
+          <div>⚡ <strong style="color:var(--text)">FastAPI + Uvicorn</strong> — Async REST API</div>
+          <div>🧠 <strong style="color:var(--text)">Scikit-learn</strong> — ML models & preprocessing</div>
+          <div>📊 <strong style="color:var(--text)">Pandas + NumPy</strong> — Data processing</div>
+          <div>📈 <strong style="color:var(--text)">Chart.js</strong> — Frontend visualizations</div>
+          <div>🎨 <strong style="color:var(--text)">Vanilla JS/CSS</strong> — No framework, fast SPA</div>
+          <div>🗃️ <strong style="color:var(--text)">IoT Pond Data</strong> — 11 CSV files, ~100k+ rows</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── FISHER INTERFACE PAGE ─── -->
+  <div class="page" id="page-fisher">
+
+    <!-- Welcome banner -->
+    <div style="background:linear-gradient(135deg,#003d5c,#005f8a);border-radius:18px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div style="font-size:3.5rem;line-height:1">🐟</div>
+      <div>
+        <div style="font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:4px">Welcome, Fisher!</div>
+        <div style="color:#90caf9;font-size:.95rem">Everything you need to take care of your fish — simple and clear.</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:.8rem;color:#90caf9">Last check</div>
+        <div id="fi-last-check" style="font-weight:700;color:#fff">—</div>
+      </div>
+    </div>
+
+    <!-- ── STEP 1: Water Status ──────────────────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Step 1 — Check your water today</div>
+
+    <div class="grid-4" style="margin-bottom:20px" id="fi-water-cards">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- ── STEP 2: Should I feed? ────────────────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Step 2 — Should I feed my fish right now?</div>
+
+    <div id="fi-feed-answer" style="margin-bottom:20px">
+      <div class="card" style="text-align:center;padding:36px">
+        <div style="font-size:2.5rem;margin-bottom:10px">⏳</div>
+        <div style="color:var(--text-muted)">Loading water data…</div>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: Quick Feeding Calculator ─────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Step 3 — How much food to give?</div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:150px">
+          <label style="display:block;font-size:.85rem;color:var(--text-muted);margin-bottom:6px">🐠 How many fish do you have?</label>
+          <input class="form-input" type="number" id="fi-fish-count" value="200" min="1" max="100000" style="font-size:1.1rem;font-weight:700"/>
+        </div>
+        <div style="flex:1;min-width:150px">
+          <label style="display:block;font-size:.85rem;color:var(--text-muted);margin-bottom:6px">⚖️ Average weight per fish (grams)</label>
+          <input class="form-input" type="number" id="fi-fish-weight" value="80" min="1" max="5000" style="font-size:1.1rem;font-weight:700"/>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="calcFeed()" style="padding:12px 22px;font-size:1rem">
+            🧮 Calculate
+          </button>
+        </div>
+      </div>
+      <div id="fi-feed-result" style="margin-top:20px;display:none">
+        <div style="background:rgba(0,180,216,.08);border:2px solid var(--teal);border-radius:14px;padding:20px;text-align:center">
+          <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">Give your fish today</div>
+          <div id="fi-feed-kg" style="font-size:3rem;font-weight:800;color:var(--teal)">—</div>
+          <div style="font-size:1rem;color:var(--text-muted)">kg of feed</div>
+          <div id="fi-feed-note" style="margin-top:10px;font-size:.85rem;color:var(--text-muted)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 4: Today's Tips ──────────────────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Step 4 — Tips for today</div>
+
+    <div id="fi-tips" class="grid-2" style="margin-bottom:20px">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- ── STEP 5: Quick Ask ─────────────────────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Step 5 — Got a question?</div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:12px">Ask AquaBot anything 🐟</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px" id="fi-quick-questions">
+        <button class="btn btn-outline" style="font-size:.85rem" onclick="fiAsk('What is a good water temperature for fish?')">🌡️ Temperature</button>
+        <button class="btn btn-outline" style="font-size:.85rem" onclick="fiAsk('How much should I feed my fish?')">🍽️ Feeding</button>
+        <button class="btn btn-outline" style="font-size:.85rem" onclick="fiAsk('My fish are sick, what do I do?')">🏥 Fish sick</button>
+        <button class="btn btn-outline" style="font-size:.85rem" onclick="fiAsk('What is dissolved oxygen?')">💨 Oxygen</button>
+        <button class="btn btn-outline" style="font-size:.85rem" onclick="fiAsk('What is ammonia and why is it dangerous?')">☠️ Ammonia</button>
+        <button class="btn btn-outline" style="font-size:.85rem" onclick="fiAsk('How often should I change the water?')">💧 Water change</button>
+      </div>
+      <div id="fi-bot-answer" style="display:none;background:var(--ocean-mid);border-radius:12px;padding:16px;font-size:.9rem;line-height:1.7;color:var(--text)"></div>
+    </div>
+
+    <!-- ── STEP 6: All Ponds Summary ─────────────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Step 6 — All your ponds at a glance</div>
+
+    <div id="fi-ponds" class="grid-auto" style="margin-bottom:20px">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- ── Navigation shortcuts ──────────────────────────── -->
+    <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">More tools</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="navigate('predict')" style="padding:12px 20px;font-size:.9rem">🤖 Advanced Prediction</button>
+      <button class="btn btn-outline" onclick="navigate('analytics')" style="padding:12px 20px;font-size:.9rem">📈 View Charts</button>
+      <button class="btn btn-outline" onclick="navigate('chat')" style="padding:12px 20px;font-size:.9rem">💬 Full Chatbot</button>
+      <button class="btn btn-outline" onclick="navigate('federated')" style="padding:12px 20px;font-size:.9rem">🌐 Federated Learning</button>
+    </div>
+  </div>
+
+  <!-- ─── FEDERATED LEARNING PAGE ─── -->
+  <div class="page" id="page-federated">
+    <div class="section-header">
+      <div>
+        <div class="section-title">🌐 Federated Learning</div>
+        <div class="section-sub">Privacy-preserving distributed training across all fish ponds</div>
+      </div>
+    </div>
+
+    <!-- Concept banner -->
+    <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg,rgba(0,180,216,.08),rgba(59,130,246,.08));border-color:var(--teal)">
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <div style="font-size:1rem;font-weight:700;color:var(--teal);margin-bottom:8px">How it works</div>
+          <div style="font-size:.84rem;color:var(--text-muted);line-height:1.8">
+            Each fish pond acts as a <strong style="color:var(--text)">private client</strong>. Raw sensor data <em>never leaves the pond</em>.
+            Instead, each client trains a local model and sends only the <strong style="color:var(--text)">model parameters</strong> to the
+            central server, which aggregates them using <strong style="color:var(--text)">FedAvg</strong>. Optional
+            <strong style="color:var(--text)">Gaussian differential privacy</strong> noise can be added to the gradients before upload.
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;font-size:1.5rem;flex-wrap:wrap">
+          <div style="text-align:center"><div>🏊</div><div style="font-size:.65rem;color:var(--text-muted)">Pond 1</div></div>
+          <div style="color:var(--teal);font-size:1rem">→ params →</div>
+          <div style="text-align:center"><div>🖥️</div><div style="font-size:.65rem;color:var(--text-muted)">FedAvg</div></div>
+          <div style="color:var(--teal);font-size:1rem">← global ←</div>
+          <div style="text-align:center"><div>🏊</div><div style="font-size:.65rem;color:var(--text-muted)">Pond N</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Config + status row -->
+    <div class="grid-2" style="margin-bottom:20px;align-items:start">
+
+      <!-- Training config -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚙️ Training Configuration</span></div>
+        <div class="form-group">
+          <label class="form-label">Communication Rounds</label>
+          <input class="form-input" type="number" id="fl-rounds" value="10" min="2" max="50" />
+          <div class="form-hint">More rounds → better convergence (2–50)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Participating Ponds (clients)</label>
+          <input class="form-input" type="number" id="fl-ponds" value="8" min="2" max="11" />
+          <div class="form-hint">Each pond trains locally on its own private data</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🔒 Differential Privacy noise σ</label>
+          <input class="form-input" type="number" id="fl-dp" value="0.0" min="0" max="2" step="0.05" />
+          <div class="form-hint">0 = no privacy noise · 0.1–0.5 = moderate DP · &gt;0.5 = strong DP</div>
+        </div>
+        <button class="btn btn-primary" id="fl-start-btn" onclick="startFL()" style="width:100%;justify-content:center;padding:12px">
+          🚀 Start Federated Training
+        </button>
+      </div>
+
+      <!-- Live status -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📡 Training Status</span>
+          <span id="fl-status-badge" class="badge badge-teal">Idle</span>
+        </div>
+        <div id="fl-status-panel">
+          <div class="text-muted small" style="padding:16px 0">
+            Click <strong>Start Federated Training</strong> to begin a new FL session.<br><br>
+            The server will coordinate gradient aggregation across all pond clients.
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--text-muted);margin-bottom:6px">
+            <span>Round progress</span>
+            <span id="fl-round-label">0 / 0</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="fl-progress-bar" style="width:0%;background:var(--teal)"></div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div style="text-align:center">
+            <div class="metric-label">Avg RMSE</div>
+            <div style="font-size:1.8rem;font-weight:700;color:var(--teal)" id="fl-rmse">—</div>
+          </div>
+          <div style="text-align:center">
+            <div class="metric-label">Avg R²</div>
+            <div style="font-size:1.8rem;font-weight:700;color:var(--green)" id="fl-r2">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Convergence chart -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title">📉 Convergence — Global RMSE per Round</span>
+        <span class="badge badge-teal" id="fl-rounds-done">0 rounds</span>
+      </div>
+      <canvas id="flConvergeChart" height="80"></canvas>
+    </div>
+
+    <!-- Client breakdown table (latest round) -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏊 Client Contributions (Latest Round)</span></div>
+      <div class="table-wrap">
+        <table id="fl-client-table">
+          <thead>
+            <tr>
+              <th>Pond</th>
+              <th>Samples</th>
+              <th>Local Loss</th>
+              <th>Contribution</th>
+            </tr>
+          </thead>
+          <tbody id="fl-client-tbody">
+            <tr><td colspan="4" style="color:var(--text-muted);padding:20px">No data yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

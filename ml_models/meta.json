@@ -1,0 +1,29 @@
+{
+  "model": "Ridge (Demo)",
+  "task": "regression",
+  "features": [
+    "temperature",
+    "dissolved_oxygen",
+    "ph",
+    "turbidity",
+    "ammonia",
+    "nitrate",
+    "fish_weight_g",
+    "thermal_stress",
+    "do_deficit",
+    "do_ok",
+    "ph_deviation",
+    "ph_acidic",
+    "ph_alkaline",
+    "turbidity_high",
+    "ammonia_toxic",
+    "water_quality_index",
+    "env_stress_index",
+    "temp_x_do",
+    "ph_x_do",
+    "turb_x_temp",
+    "temp_sq"
+  ],
+  "training_samples": 5000,
+  "note": "Demo model \u2014 run scripts/train_model.py for production."
+}
